@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aisha | Beyond the Distance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #fbbf24;
+            --space: #020617;
+            --valentine-red: #e11d48;
+            --soft-rose: #fda4af;
+        }
+        body {
+            background-color: var(--space);
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            scrollbar-width: none;
+        }
+        body::-webkit-scrollbar { display: none; }
+
+        .serif-gold { font-family: 'Cinzel', serif; color: var(--gold); }
+        
+        canvas { position: fixed; top: 0; left: 0; z-index: -1; pointer-events: none; }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(251, 191, 36, 0.15);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* BIGGER PHOTO FRAMES */
+        .photo-frame {
+            width: 320px;
+            height: 400px;
+            background: #1e293b;
+            border: 12px solid white;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.6);
+            transform: rotate(var(--r));
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+        }
+        .photo-frame:hover {
+            transform: rotate(0deg) scale(1.05);
+            z-index: 50;
+            border-color: var(--valentine-red);
+        }
+
+        .bar {
+            width: 3px;
+            background: var(--valentine-red);
+            margin: 0 1px;
+            display: inline-block;
+            animation: pulse-height 1s ease-in-out infinite;
+        }
+        @keyframes pulse-height {
+            0%, 100% { height: 5px; }
+            50% { height: 25px; }
+        }
+
+        #torch {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(225, 29, 72, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+        }
+
+        .hold-progress {
+            position: absolute;
+            bottom: 0; left: 0; width: 0%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(225, 29, 72, 0.4));
+            transition: width 0.1s linear;
+        }
+
+        .heart-beat {
+            animation: beat 1.2s infinite;
+        }
+        @keyframes beat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        #start-btn {
+            transition: all 0.3s ease;
+        }
+        #start-btn:hover {
+            background: var(--valentine-red);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Valentine Question Styles */
+        #no-btn {
+            transition: all 0.2s ease-out;
+            position: relative;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SONG SETTINGS -->
+    <audio id="valentineMusic" loop preload="auto">
+        <source src="I_Think_They_Call_This_Love_Cover.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="torch"></div>
+    <canvas id="starfield"></canvas>
+
+    <!-- 1. LOADING OVERLAY & AUTO-PLAY TRIGGER -->
+    <div id="loader" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center">
+        <div class="mb-8 overflow-hidden text-center px-4">
+            <h1 class="serif-gold text-2xl tracking-[0.5em] animate-pulse">ALIGINING THE STARS FOR FEB 14</h1>
+        </div>
+        
+        <button id="start-btn" class="hidden opacity-0 mt-4 px-8 py-3 rounded-full border border-rose-500 text-rose-500 font-semibold tracking-widest uppercase text-xs">
+            Enter Our Galaxy
+        </button>
+
+        <div id="loader-bar-container" class="w-64 h-[1px] bg-slate-800 relative mt-8">
+            <div id="progress-bar" class="absolute inset-0 bg-rose-500 w-0"></div>
+        </div>
+    </div>
+
+    <!-- 2. NAVIGATION/MUSIC UI -->
+    <nav class="fixed top-0 w-full p-8 flex justify-between items-center z-50">
+        <div class="serif-gold text-xl tracking-tighter">Aisha <span class="text-rose-500">♥</span> Soumya</div>
+        <div class="flex items-center gap-3">
+            <div id="music-bars" class="flex items-end h-8 opacity-50">
+                <div class="bar" style="animation-delay: 0.1s"></div>
+                <div class="bar" style="animation-delay: 0.3s"></div>
+                <div class="bar" style="animation-delay: 0.2s"></div>
+                <div class="bar" style="animation-delay: 0.4s"></div>
+            </div>
+            <span class="text-[10px] uppercase tracking-widest text-rose-300">Valentine's Vibe</span>
+        </div>
+    </nav>
+
+    <!-- 3. HERO SECTION -->
+    <section class="h-screen flex flex-col items-center justify-center relative px-6">
+        <div class="text-center">
+            <p class="text-rose-300 tracking-[0.6em] uppercase text-[10px] mb-6 opacity-0 hero-el">Under the same sky • Feb 14, 2026</p>
+            <h1 class="serif-gold text-7xl md:text-[10rem] font-bold mb-4 opacity-0 hero-el leading-none">AISHA</h1>
+            <p class="text-slate-400 text-lg md:text-xl max-w-xl mx-auto font-light opacity-0 hero-el italic">
+                "Distance is just a test of how far love can travel. This Valentine's, my heart travels to you."
+            </p>
+            
+            <div id="countdown-container" class="mt-12 opacity-0 hero-el glass-card px-8 py-4 rounded-full inline-flex gap-8">
+                <div class="text-center"><span id="days" class="block text-2xl font-bold">00</span><span class="text-[10px] uppercase text-rose-300">Days</span></div>
+                <div class="text-center border-l border-white/10 pl-8"><span id="hours" class="block text-2xl font-bold">00</span><span class="text-[10px] uppercase text-rose-300">Hrs</span></div>
+                <div class="text-center border-l border-white/10 pl-8"><span id="mins" class="block text-2xl font-bold">00</span><span class="text-[10px] uppercase text-rose-300">Mins</span></div>
+                <div class="text-center border-l border-white/10 pl-8"><span id="secs" class="block text-2xl font-bold">00</span><span class="text-[10px] uppercase text-rose-300">Secs</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. WORLD CLOCK SECTION -->
+    <section class="py-20 px-6">
+        <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card p-12 rounded-3xl text-center reveal">
+                <p class="text-amber-200 text-xs tracking-widest uppercase mb-4">Soumya's World</p>
+                <h2 id="myTime" class="serif-gold text-5xl">00:00:00</h2>
+                <p class="text-slate-500 mt-2 italic">Wishing you were here.</p>
+            </div>
+            <div class="glass-card p-12 rounded-3xl text-center reveal border-rose-500/20">
+                <p class="text-rose-300 text-xs tracking-widest uppercase mb-4">Aisha's World</p>
+                <h2 id="herTime" class="serif-gold text-5xl text-rose-500">00:00:00</h2>
+                <p class="text-slate-500 mt-2 italic">Always in my heart.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. VALENTINE'S LDR CONNECTION -->
+    <section class="py-20 px-6 overflow-hidden">
+        <div class="max-w-4xl mx-auto relative h-64 flex items-center justify-between reveal">
+            <div class="text-center z-10">
+                <div class="w-24 h-24 rounded-full border border-amber-400 flex items-center justify-center bg-slate-950">
+                    <span class="text-lg">SOUMYA</span>
+                </div>
+                <p class="mt-4 text-[10px] uppercase tracking-widest text-amber-200">Point A</p>
+            </div>
+            
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-full h-[1px] bg-gradient-to-r from-amber-400 via-rose-500 to-amber-400 relative">
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl heart-beat">❤️</div>
+                </div>
+            </div>
+
+            <div class="text-center z-10">
+                <div class="w-24 h-24 rounded-full border border-rose-500 flex items-center justify-center bg-slate-950">
+                    <span class="text-lg">AISHA</span>
+                </div>
+                <p class="mt-4 text-[10px] uppercase tracking-widest text-rose-300">Point B</p>
+            </div>
+        </div>
+        <div class="text-center mt-8">
+            <p class="serif-gold text-xl italic reveal">"Connected by a thread that never breaks."</p>
+        </div>
+    </section>
+
+    <!-- 6. MEMORY GALAXY (LARGER IMAGES) -->
+    <section class="min-h-screen py-20 relative overflow-hidden">
+        <h2 class="text-center serif-gold text-4xl mb-20 reveal">Our Love in Frames</h2>
+        <div class="flex flex-wrap justify-center gap-16 px-10 max-w-7xl mx-auto">
+            <div class="photo-frame reveal" style="--r: -4deg;">
+                <img src="i1.jpeg" alt="Memory" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700">
+                <div class="absolute bottom-[-40px] left-0 w-full text-center serif-gold text-xs opacity-0 hover:opacity-100 transition-opacity">Together Forever</div>
+            </div>
+            <div class="photo-frame reveal" style="--r: 2deg;">
+                <img src="i2.jpeg" alt="Memory" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700">
+            </div>
+            <div class="photo-frame reveal" style="--r: -3deg;">
+                <img src="i3.jpeg" alt="Memory" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700">
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. THE HUG BUTTON -->
+    <section class="h-screen flex flex-col items-center justify-center relative">
+        <div class="max-w-2xl text-center z-20 reveal">
+            <h2 class="serif-gold text-4xl mb-8">A Valentine's Hug</h2>
+            <p class="text-slate-400 mb-12">I can't be there to hold you tonight, but hold this button. Feel the signal travel through the air, across the miles, straight to you.</p>
+            
+            <button id="hugBtn" 
+                class="group relative px-20 py-8 rounded-full border border-rose-500/30 overflow-hidden transition-all hover:scale-105 active:scale-95">
+                <span class="relative z-10 serif-gold tracking-widest group-hover:text-slate-950 transition-colors">SEND VALENTINE LOVE</span>
+                <div id="holdProgress" class="hold-progress"></div>
+            </button>
+        </div>
+    </section>
+
+    <!-- 8. VALENTINE'S PROMISE & INTERACTIVE QUESTION -->
+    <section class="py-40 px-6 text-center reveal">
+        <div class="max-w-xl mx-auto glass-card p-12 rounded-3xl border-rose-500/30">
+            <div class="w-12 h-12 border-t border-l border-rose-500 mx-auto mb-8"></div>
+            <h3 class="serif-gold text-3xl mb-8 text-rose-400">Will You Be My Valentine, Aisha?</h3>
+            
+            <div class="flex justify-center items-center gap-8 mt-12 relative h-24">
+                <button id="yes-btn" class="px-10 py-3 bg-rose-600 rounded-full text-white font-bold tracking-widest shadow-lg shadow-rose-900/40 hover:scale-110 transition-transform">YES!</button>
+                <button id="no-btn" class="px-10 py-3 bg-slate-800 rounded-full text-slate-400 font-bold tracking-widest border border-slate-700">No</button>
+            </div>
+
+            <p class="text-slate-500 text-sm mt-12 italic opacity-60">"Distance is only a temporary chapter in our story. I promise that soon, we won't have to say goodbye at all."</p>
+            <div class="w-12 h-12 border-b border-r border-rose-500 mx-auto mt-8"></div>
+        </div>
+    </section>
+
+    <!-- SUCCESS MODAL -->
+    <div id="valentine-success" class="modal-overlay">
+        <div class="glass-card p-12 rounded-3xl text-center max-w-md mx-4 border-rose-500">
+            <div class="text-6xl mb-6">💖</div>
+            <h2 class="serif-gold text-3xl mb-4">OBVIOUSLY!</h2>
+            <p class="text-slate-200 mb-6 italic text-lg">"I knew you'd say yes (mostly because I broke the 'No' button, but let's call it destiny)."</p>
+            <p class="text-rose-300 font-bold mb-8">Get ready for the best Valentine's ever! 🥂🌹</p>
+            <button onclick="document.getElementById('valentine-success').style.display='none'" class="text-xs uppercase tracking-tighter text-slate-500 hover:text-white underline">Close with a blush</button>
+        </div>
+    </div>
+
+    <div id="hugEffect" class="fixed inset-0 pointer-events-none opacity-0 bg-white z-[1000] flex items-center justify-center text-slate-950">
+        <div class="text-center">
+            <h1 class="serif-gold text-6xl md:text-8xl mb-4">LOVE RECEIVED ❤️</h1>
+            <p class="tracking-[1em] uppercase text-sm">Happy Valentine's Day, Aisha</p>
+        </div>
+    </div>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 1.5;
+                this.speed = Math.random() * 0.3;
+                this.brightness = Math.random();
+                this.isHeart = Math.random() > 0.98; 
+            }
+            update() {
+                this.y -= this.speed;
+                if (this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                if(this.isHeart) {
+                    ctx.fillStyle = `rgba(225, 29, 72, ${this.brightness})`;
+                    ctx.font = "10px serif";
+                    ctx.fillText("❤", this.x, this.y);
+                } else {
+                    ctx.fillStyle = `rgba(251, 191, 36, ${this.brightness})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 250; i++) stars.push(new Star());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => { s.update(); s.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        function updateCountdown() {
+            const target = new Date("February 14, 2025 00:00:00").getTime();
+            const now = new Date().getTime();
+            const diff = target - now;
+            if (diff > 0) {
+                document.getElementById('days').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+                document.getElementById('hours').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+                document.getElementById('mins').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+                document.getElementById('secs').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            } else {
+                document.getElementById('countdown-container').innerHTML = "<span class='serif-gold text-2xl tracking-widest'>HAPPY VALENTINE'S DAY!</span>";
+            }
+        }
+        setInterval(updateCountdown, 1000);
+
+        function updateClocks() {
+            const now = new Date();
+            document.getElementById('myTime').innerText = now.toLocaleTimeString();
+            const aishaOffset = 0; 
+            const aishaTime = new Date(now.getTime() + (aishaOffset * 3600000));
+            document.getElementById('herTime').innerText = aishaTime.toLocaleTimeString();
+        }
+        setInterval(updateClocks, 1000);
+
+        const torch = document.getElementById('torch');
+        document.addEventListener('mousemove', (e) => {
+            gsap.to(torch, { x: e.clientX, y: e.clientY, duration: 0.5 });
+        });
+
+        const music = document.getElementById('valentineMusic');
+        const startBtn = document.getElementById('start-btn');
+        const loaderBar = document.getElementById('loader-bar-container');
+
+        // Loader and Start Logic
+        window.addEventListener('load', () => {
+            gsap.to("#progress-bar", { 
+                width: "100%", 
+                duration: 2.0, 
+                ease: "power2.inOut",
+                onComplete: () => {
+                    gsap.to(loaderBar, { opacity: 0, duration: 0.5 });
+                    gsap.to(startBtn, { display: 'block', opacity: 1, duration: 0.5 });
+                }
+            });
+        });
+
+        startBtn.addEventListener('click', () => {
+            music.play().catch(e => console.log("Audio play failed"));
+            document.getElementById('music-bars').style.opacity = "1";
+            gsap.to("#loader", { 
+                autoAlpha: 0, 
+                duration: 1.5,
+                onComplete: () => {
+                    gsap.to(".hero-el", { opacity: 1, y: -30, stagger: 0.3, duration: 1.5, ease: "power3.out" });
+                }
+            });
+        });
+
+        // Scroll reveals
+        gsap.utils.toArray(".reveal").forEach(el => {
+            gsap.from(el, {
+                scrollTrigger: {
+                    trigger: el,
+                    start: "top 85%",
+                },
+                opacity: 0,
+                y: 40,
+                duration: 1.2,
+                ease: "power2.out"
+            });
+        });
+
+        // Valentine Interaction logic
+        const noBtn = document.getElementById('no-btn');
+        const yesBtn = document.getElementById('yes-btn');
+        const successModal = document.getElementById('valentine-success');
+
+        noBtn.addEventListener('mouseover', () => {
+            const x = Math.random() * 300 - 150;
+            const y = Math.random() * 300 - 150;
+            gsap.to(noBtn, { x: x, y: y, duration: 0.2, ease: "power1.out" });
+        });
+
+        yesBtn.addEventListener('click', () => {
+            successModal.style.display = 'flex';
+            gsap.from(successModal.querySelector('.glass-card'), { scale: 0.5, opacity: 0, duration: 0.5, ease: "back.out" });
+        });
+
+        // Hug logic
+        const hugBtn = document.getElementById('hugBtn');
+        const holdProgress = document.getElementById('holdProgress');
+        let holdTimer;
+        let p = 0;
+
+        const startHold = () => {
+            holdTimer = setInterval(() => {
+                p += 1.5;
+                holdProgress.style.width = p + '%';
+                if (p >= 100) {
+                    clearInterval(holdTimer);
+                    triggerHug();
+                }
+            }, 20);
+        };
+
+        const endHold = () => {
+            clearInterval(holdTimer);
+            if (p < 100) {
+                p = 0;
+                holdProgress.style.width = '0%';
+            }
+        };
+
+        function triggerHug() {
+            gsap.to("#hugEffect", { opacity: 1, duration: 0.8, ease: "power2.in", onComplete: () => {
+                setTimeout(() => {
+                    gsap.to("#hugEffect", { opacity: 0, duration: 1.5 });
+                    p = 0;
+                    holdProgress.style.width = '0%';
+                }, 2000);
+            }});
+        }
+
+        hugBtn.addEventListener('mousedown', startHold);
+        hugBtn.addEventListener('touchstart', startHold);
+        window.addEventListener('mouseup', endHold);
+        window.addEventListener('touchend', endHold);
+
+        window.addEventListener('resize', resize);
+        resize();
+        initStars();
+        animate();
+    </script>
+</body>
+</html>
